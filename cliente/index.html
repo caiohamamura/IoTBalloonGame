@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BLOONS SIEGE – Multiplayer</title>
+<link href="https://fonts.googleapis.com/css2?family=Bangers&family=Nunito:wght@400;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="estilo.css">
+</head>
+<body>
+
+<!-- WS indicator -->
+<div class="ws-indicator">
+  <div class="ws-dot" id="wsDot"></div>
+  <span id="wsLabel">Connecting…</span>
+</div>
+
+<!-- Connection overlay -->
+<div id="connOverlay">
+  <div class="spin"></div>
+  <p>Connecting to server…</p>
+</div>
+
+<!-- ══ LOBBY ══ -->
+<div class="screen" id="lobby">
+  <div class="lobby-bg" id="lobbyBg"></div>
+  <h1 class="lobby-title">BLOONS SIEGE</h1>
+  <p class="lobby-sub">Multiplayer • IoT Edition</p>
+  <div class="lobby-panel">
+    <h2>⚡ PLAYERS ONLINE</h2>
+    <ul id="playerList"></ul>
+    <p class="lobby-status" id="lobbyStatus">Waiting for players to connect…</p>
+    <button id="btnStart" disabled>START GAME</button>
+  </div>
+</div>
+
+<!-- ══ GAME ══ -->
+<div class="screen" id="game">
+  <div class="side-panel" id="leftPanel"></div>
+
+  <div class="arena" id="arena">
+    <!-- HUD -->
+    <div class="hud">
+      <div class="hud-item">
+        <span class="hud-label">Wave</span>
+        <span class="hud-value" id="waveDisplay">1</span>
+      </div>
+      <div class="health-bar-wrap" title="Team HP">
+        <div id="healthBar"></div>
+      </div>
+      <div class="hud-item">
+        <span class="hud-label">Time</span>
+        <span id="timerDisplay">2:00</span>
+      </div>
+    </div>
+
+    <!-- Pipe -->
+    <div class="pipe" id="pipe">
+      <div class="pipe-wall left"></div>
+      <div class="pipe-wall right"></div>
+      <div class="pipe-inner" id="pipeInner">
+        <!-- Balloons go here -->
+      </div>
+    </div>
+
+    <!-- Crosshair (positioned by JS) -->
+    <div class="crosshair" id="crosshair">
+      <svg viewBox="0 0 90 90" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="45" cy="45" r="38" stroke="#ff4500" stroke-width="3" stroke-dasharray="8 4"/>
+        <circle cx="45" cy="45" r="18" stroke="#ff4500" stroke-width="2"/>
+        <circle cx="45" cy="45" r="5" fill="#ff4500"/>
+        <line x1="45" y1="0" x2="45" y2="27" stroke="#ff4500" stroke-width="2"/>
+        <line x1="45" y1="63" x2="45" y2="90" stroke="#ff4500" stroke-width="2"/>
+        <line x1="0" y1="45" x2="27" y2="45" stroke="#ff4500" stroke-width="2"/>
+        <line x1="63" y1="45" x2="90" y2="45" stroke="#ff4500" stroke-width="2"/>
+        <circle cx="45" cy="45" r="42" stroke="rgba(255,69,0,0.2)" stroke-width="6"/>
+      </svg>
+    </div>
+
+    <!-- Zone glow -->
+    <div id="zoneLight"></div>
+  </div>
+
+  <div class="side-panel" id="rightPanel"></div>
+</div>
+
+<!-- ══ SCORING ══ -->
+<div class="screen" id="scoring">
+  <h1>GAME OVER</h1>
+  <p class="reason" id="endReason"></p>
+  <div id="scoreTable"></div>
+  <button id="btnRestart">PLAY AGAIN</button>
+</div>
+<script src="script.js"></script>
+</body>
+</html>
