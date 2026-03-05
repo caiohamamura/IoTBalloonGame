@@ -3,9 +3,11 @@
 // ══════════════════════════════════════════════
 const WS_URL = `ws://${location.hostname}:8000/ws`;
 const CROSSHAIR_OFFSET_PERCENT = 0.62; // 62% down the pipe
-const ZONE_TOLERANCE_PX = 55;          // balloon center must be within this of crosshair
 const GAME_DURATION = 120;             // seconds
 const MAX_LIVES = 5;
+
+// Reference pipe height the server's speed values were tuned for (logical px)
+const REFERENCE_PIPE_H = 800;
 
 // Balloon definitions (client-side display only; server drives the data)
 const BALLOON_COLORS = {
@@ -20,19 +22,22 @@ const BALLOON_COLORS = {
 let ws = null;
 let players = {};            // { name: { score, avatar, side } }
 let balloons = {};           // { id: { el, type, hp, maxHp, top, speed } }
-let crosshairY = 0;
+let crosshairY = 0;          // pixels from arena top (center of crosshair)
+let pipeOffsetY = 48;        // pixels from arena top to pipe inner top (= HUD height)
+let zoneTolerance = 55;      // pixels – recalculated on resize
 let lives = MAX_LIVES;
 let timeLeft = GAME_DURATION;
 let timerInterval = null;
 let phase = 'lobby';         // lobby | game | scoring
 let balloonInZone = false;
+let pipeScaleFactor = 1;     // actual pipeH / REFERENCE_PIPE_H
 
 // ══════════════════════════════════════════════
 //  HELPERS
 // ══════════════════════════════════════════════
 const $ = id => document.getElementById(id);
 
-const AVATARS = ['🐸', '🐙', '🦊', '🐼', '🐯', '🦁', '🐻', '🐮', '🐷', '🐸'];
+const AVATARS = ['🐸', '🐙', '🦊', '🐼', '🐯', '🦁', '🐻', '🐮', '🐷', '🐝'];
 let avatarIdx = 0;
 
 function getAvatar() {
@@ -152,37 +157,60 @@ function onGameStart(msg) {
 }
 
 function setupArena() {
-  // Place crosshair
   const arena = $('arena');
-  const pipe = $('pipe');
-  const arenaH = arena.clientHeight;
-  const pipeTop = 48; // below HUD
-  const pipeH = arenaH - pipeTop;
-  crosshairY = pipeTop + pipeH * CROSSHAIR_OFFSET_PERCENT;
+  const pipeInner = $('pipeInner');
 
-  const ch = $('crosshair');
-  ch.style.top = (crosshairY - 45) + 'px';
-
-  const zl = $('zoneLight');
-  zl.style.top = (crosshairY - 45) + 'px';
-
-  // Add decorative clouds
-  arena.querySelectorAll('.arena-cloud').forEach(c => c.remove());
-  for (let i = 0; i < 5; i++) {
-    const c = document.createElement('div');
-    c.className = 'arena-cloud';
-    c.style.cssText = `
-      width: ${60 + Math.random()*80}px;
-      height: ${20 + Math.random()*20}px;
-      top: ${10 + Math.random()*30}%;
-      left: ${Math.random()*80}%;
-      opacity: ${0.4 + Math.random()*0.4};
-    `;
-    arena.appendChild(c);
+  // Compute scale synchronously so balloons spawned immediately get correct values
+  {
+    const arenaH = arena.clientHeight || window.innerHeight;
+    const HUD_H  = 48;
+    const pipeH  = arenaH - HUD_H;
+    pipeScaleFactor = pipeH / REFERENCE_PIPE_H;
+    pipeOffsetY     = HUD_H;
+    crosshairY      = HUD_H + pipeH * CROSSHAIR_OFFSET_PERCENT;
+    zoneTolerance   = REFERENCE_PIPE_H * 0.065 * pipeScaleFactor;
   }
 
-  $('waveDisplay').textContent = '1';
-  updateHealthBar();
+  // Wait one frame for layout to settle, then finalize visual positioning
+  requestAnimationFrame(() => {
+    const arenaH  = arena.clientHeight;
+    const HUD_H   = 48;                        // fixed HUD height (px)
+    const pipeH   = arenaH - HUD_H;            // visible pipe height in real px
+    pipeScaleFactor = pipeH / REFERENCE_PIPE_H;
+    pipeOffsetY = HUD_H;                       // arena-relative Y where pipeInner starts
+
+    // Cross-hair center sits at CROSSHAIR_OFFSET_PERCENT of the pipe (arena-relative)
+    crosshairY = HUD_H + pipeH * CROSSHAIR_OFFSET_PERCENT;
+
+    // Zone tolerance scales with pipe height
+    zoneTolerance = REFERENCE_PIPE_H * 0.064 * pipeScaleFactor; // ~55px at reference
+
+    // Position crosshair so its visual CENTER lands exactly on crosshairY
+    const CROSSHAIR_HALF = 45; // half of 90px crosshair
+    const ch = $('crosshair');
+    ch.style.top = (crosshairY - CROSSHAIR_HALF) + 'px';
+
+    const zl = $('zoneLight');
+    zl.style.top = (crosshairY - CROSSHAIR_HALF) + 'px';
+
+    // Decorative clouds
+    arena.querySelectorAll('.arena-cloud').forEach(c => c.remove());
+    for (let i = 0; i < 5; i++) {
+      const c = document.createElement('div');
+      c.className = 'arena-cloud';
+      c.style.cssText = `
+        width: ${60 + Math.random()*80}px;
+        height: ${20 + Math.random()*20}px;
+        top: ${10 + Math.random()*30}%;
+        left: ${Math.random()*80}%;
+        opacity: ${0.4 + Math.random()*0.4};
+      `;
+      arena.appendChild(c);
+    }
+
+    $('waveDisplay').textContent = '1';
+    updateHealthBar();
+  });
 }
 
 function startTimer() {
@@ -192,10 +220,7 @@ function startTimer() {
     timeLeft--;
     $('timerDisplay').textContent = formatTime(timeLeft);
     if (timeLeft <= 20) $('timerDisplay').classList.add('urgent');
-    if (timeLeft <= 0) {
-      clearInterval(timerInterval);
-      // server will send game_over, but we stop locally too
-    }
+    if (timeLeft <= 0) clearInterval(timerInterval);
   }, 1000);
 }
 
@@ -203,13 +228,12 @@ function startTimer() {
 //  SIDE PANELS
 // ══════════════════════════════════════════════
 function renderSidePanels() {
-  const left = $('leftPanel');
+  const left  = $('leftPanel');
   const right = $('rightPanel');
-  left.innerHTML = '';
+  left.innerHTML  = '';
   right.innerHTML = '';
 
-  const names = Object.keys(players);
-  names.forEach((name, i) => {
+  Object.keys(players).forEach((name, i) => {
     const p = players[name];
     const card = document.createElement('div');
     card.className = 'player-card';
@@ -221,7 +245,7 @@ function renderSidePanels() {
       <div class="player-score" id="score-${name}">${p.score}</div>
     `;
     if (i % 2 === 0) left.appendChild(card);
-    else right.appendChild(card);
+    else             right.appendChild(card);
   });
 }
 
@@ -234,32 +258,56 @@ function updatePlayerScore(name) {
 //  BALLOONS
 // ══════════════════════════════════════════════
 function onBalloonSpawn(msg) {
-  // msg: { id, type, hp, speed }
-  const pipeInner = $('pipeInner');
+  const pipeInner  = $('pipeInner');
   const pipeInnerH = pipeInner.clientHeight;
 
-  const el = document.createElement('div');
-  el.className = 'balloon';
-  el.dataset.type = msg.type;
-  el.dataset.id = msg.id;
-  el.style.top = '-80px';
+  // Scale speed from reference pipe height to actual pipe height
+  const scaledSpeed = msg.speed * pipeScaleFactor;
 
+  // Visual scale factor for balloon body (so they look right at any screen size)
+  const bs = Math.max(0.55, Math.min(1.4, pipeScaleFactor));
+
+  // Body height lookup (matches CSS definitions) — used for accurate zone detection
+  const BODY_HEIGHTS = {
+    red: 52, blue: 58, green: 64, yellow: 60,
+    black: 70, white: 70, purple: 76, moab: 52
+  };
+  const bodyH = BODY_HEIGHTS[msg.btype] ?? 52;
+
+  const el = document.createElement('div');
+  el.className    = 'balloon';
+  el.dataset.type = msg.btype;
+  el.dataset.id   = msg.id;
+  el.style.top    = '-100px';
+  el.style.setProperty('--bs', bs);
+
+  const label = msg.btype === 'moab' ? 'M.O.A.B' : '';
   el.innerHTML = `
-    <div class="balloon-hp" id="bhp-${msg.id}">${msg.hp}/${msg.hp}</div>
-    <div class="balloon-body">${msg.type === 'moab' ? 'M.O.A.B' : ''}</div>
+    <div class="balloon-body">
+      <span class="balloon-hp" id="bhp-${msg.id}">${msg.hp}❤</span>
+      ${label}
+    </div>
     <div class="balloon-string"></div>
   `;
+
+  // Assign z-index so newer balloons render on top of older ones
+  const spawnOrder = Object.keys(balloons).length;
+  el.style.zIndex = 10 + spawnOrder;
 
   pipeInner.appendChild(el);
 
   balloons[msg.id] = {
-    el, type: msg.type,
-    hp: msg.hp, maxHp: msg.hp,
-    top: -80, speed: msg.speed,
-    pipeH: pipeInnerH
+    el,
+    type:   msg.btype,
+    hp:     msg.hp,
+    maxHp:  msg.hp,
+    top:    -100,
+    speed:  scaledSpeed,
+    pipeH:  pipeInnerH,
+    bodyH,
+    bs,
   };
 
-  // Animate downward with rAF
   animateBalloon(msg.id);
 }
 
@@ -271,23 +319,27 @@ function animateBalloon(id) {
 
   function frame(ts) {
     if (!balloons[id]) return;
-    if (lastTime === null) lastTime = ts;
-    const dt = (ts - lastTime) / 1000;
+    if (lastTime === null) { lastTime = ts; requestAnimationFrame(frame); return; }
+    const dt = Math.min((ts - lastTime) / 1000, 0.05); // cap at 50ms to prevent jumps
     lastTime = ts;
 
     b.top += b.speed * dt;
     b.el.style.top = b.top + 'px';
 
-    // Check zone
-    const pipeRect = $('pipeInner').getBoundingClientRect();
-    const arenaRect = $('arena').getBoundingClientRect();
-    const balloonAbsolute = pipeRect.top + b.top + 26 - arenaRect.top;
-    const dist = Math.abs(balloonAbsolute - crosshairY);
-    b.inZone = dist < ZONE_TOLERANCE_PX;
+    // Zone check: balloon center in arena coords = pipeOffsetY + b.top + halfBodyH
+    // halfBodyH is half the scaled body height (body heights vary by type, ~52px avg * --bs)
+    const halfBodyH = (b.bodyH || 52) * (b.bs || 1) * 0.5;
+    const balloonCenterY = pipeOffsetY + b.top + halfBodyH;
+    // Hit window: balloon centre must be within zoneTolerance ABOVE the crosshair,
+    // and no more than a tiny margin BELOW it — so the zone is centred on approach
+    // and ends right as the balloon centre passes the crosshair line.
+    b.inZone = (balloonCenterY >= crosshairY - zoneTolerance) &&
+               (balloonCenterY <= crosshairY + zoneTolerance * 0.3);
 
-    // Check escape (past pipe bottom)
-    if (b.top > b.pipeH + 80) {
-      // Tell server it escaped if still tracked (server is authoritative, but client animates)
+    // Don't interfere with the pop animation
+    if (b.popping) return;
+
+    if (b.top > b.pipeH + 100) {
       delete balloons[id];
       return;
     }
@@ -299,58 +351,49 @@ function animateBalloon(id) {
 }
 
 function onZoneUpdate(msg) {
-  // msg: { balloon_in_zone: bool }
   balloonInZone = msg.balloon_in_zone;
   const zl = $('zoneLight');
-  if (balloonInZone) {
-    zl.classList.add('active');
-  } else {
-    zl.classList.remove('active');
-  }
+  if (balloonInZone) zl.classList.add('active');
+  else               zl.classList.remove('active');
 }
 
 function onBalloonHit(msg) {
-  // msg: { id, shooter, hp_left, points }
   const b = balloons[msg.id];
   if (!b) return;
 
-  // Flash balloon
   b.el.classList.remove('hit');
   void b.el.offsetWidth;
   b.el.classList.add('hit');
   b.hp = msg.hp_left;
 
-  // Update HP label
   const hpEl = $(`bhp-${msg.id}`);
-  if (hpEl) hpEl.textContent = `${msg.hp_left}/${b.maxHp}`;
+  if (hpEl) hpEl.textContent = `${msg.hp_left}❤`;
 
-  // Score popup
   showScorePopup(msg.points, false);
-
-  // Flash shooter card
   flashShooter(msg.shooter);
 
-  // Update score
   if (players[msg.shooter]) {
     players[msg.shooter].score += msg.points;
     updatePlayerScore(msg.shooter);
   }
 
-  // Shoot burst at crosshair
   spawnBurst();
 }
 
 function onBalloonPop(msg) {
-  // msg: { id, killer, bonus_points, points }
   const b = balloons[msg.id];
 
-  // Pop animation
   if (b) {
+    // Mark as popping so the rAF loop stops moving/deleting it
+    b.popping = true;
     b.el.classList.add('popping');
     setTimeout(() => {
       b.el.remove();
       delete balloons[msg.id];
-    }, 400);
+    }, 500);
+  } else {
+    // Balloon was already removed client-side (escaped past pipe bottom).
+    // Still show the effects since server confirmed the pop.
   }
 
   showScorePopup(msg.bonus_points, true);
@@ -365,36 +408,35 @@ function onBalloonPop(msg) {
 }
 
 function onBalloonEscaped(msg) {
-  // msg: { id, lives_left }
   const b = balloons[msg.id];
-  if (b) {
-    b.el.remove();
-    delete balloons[msg.id];
-  }
+  if (b) { b.el.remove(); delete balloons[msg.id]; }
 
   lives = msg.lives_left;
   updateHealthBar();
 
-  // Flash arena red
   const arena = $('arena');
   arena.classList.add('escaped');
   setTimeout(() => arena.classList.remove('escaped'), 500);
 }
 
 function onShootMiss(msg) {
-  // msg: { shooter }
-  const pipeInner = $('pipeInner');
-  const pipeH = pipeInner.clientHeight;
   const miss = document.createElement('div');
-  miss.className = 'miss-text';
-  miss.style.top = (crosshairY - 50) + 'px';
+  miss.className  = 'miss-text';
+  miss.style.top  = (crosshairY - 50) + 'px';
   miss.textContent = 'MISS!';
+
   $('arena').appendChild(miss);
+  showScorePopup(-1, false);
+  flashShooter(msg.shooter);
+
+  if (players[msg.shooter]) {
+    players[msg.shooter].score -= 1;
+    updatePlayerScore(msg.shooter);
+  }
   setTimeout(() => miss.remove(), 800);
 }
 
 function onStateSync(msg) {
-  // Sync scores, lives, time
   if (msg.scores) {
     Object.entries(msg.scores).forEach(([name, score]) => {
       if (players[name]) {
@@ -403,32 +445,23 @@ function onStateSync(msg) {
       }
     });
   }
-  if (msg.lives !== undefined) {
-    lives = msg.lives;
-    updateHealthBar();
-  }
-  if (msg.time_left !== undefined) {
-    timeLeft = msg.time_left;
-  }
-  if (msg.wave !== undefined) {
-    $('waveDisplay').textContent = msg.wave;
-  }
+  if (msg.lives !== undefined) { lives = msg.lives; updateHealthBar(); }
+  if (msg.time_left !== undefined) timeLeft = msg.time_left;
+  if (msg.wave !== undefined) $('waveDisplay').textContent = msg.wave;
 }
 
 // ══════════════════════════════════════════════
 //  GAME OVER
 // ══════════════════════════════════════════════
 function onGameOver(msg) {
-  // msg: { reason, scores: [{name, score}] }
   phase = 'scoring';
   clearInterval(timerInterval);
 
-  // Clear remaining balloons
   Object.values(balloons).forEach(b => b.el?.remove());
   balloons = {};
 
   $('endReason').textContent = msg.reason === 'time'
-    ? '⏱ Time\'s up!' : '💔 Too many balloons escaped!';
+    ? "⏱ Time's up!" : '💔 Too many balloons escaped!';
 
   const table = $('scoreTable');
   table.innerHTML = '';
@@ -467,37 +500,38 @@ function updateHealthBar() {
 
 function flashShooter(name) {
   const card = $(`card-${name}`);
-  const si = $(`si-${name}`);
+  const si   = $(`si-${name}`);
   if (card) {
+    // Force re-trigger animation even if fired rapidly
+    card.classList.remove('shot-flash');
+    void card.offsetWidth;
     card.classList.add('shot-flash');
-    setTimeout(() => card.classList.remove('shot-flash'), 300);
+    setTimeout(() => card.classList.remove('shot-flash'), 450);
   }
   if (si) {
     si.classList.add('active');
-    setTimeout(() => si.classList.remove('active'), 300);
+    setTimeout(() => si.classList.remove('active'), 450);
   }
 }
 
 function showScorePopup(pts, isDouble) {
   const pop = document.createElement('div');
-  pop.className = 'score-popup' + (isDouble ? ' double' : '');
-  pop.style.top = (crosshairY - 30) + 'px';
-  pop.textContent = isDouble ? `🎉 +${pts}!` : `+${pts}`;
+  pop.className   = 'score-popup' + (isDouble ? ' double' : '');
+  pop.style.top   = (crosshairY - 30) + 'px';
+  pop.textContent = isDouble ? `🎉 +${pts}!` : pts < 0 ? `${pts}` : `+${pts}`;
   $('arena').appendChild(pop);
   setTimeout(() => pop.remove(), 1000);
 }
 
 function spawnBurst() {
-  const burst = document.createElement('div');
+  const burst    = document.createElement('div');
   burst.className = 'shoot-burst';
-  const pipeEl = $('pipe');
-  const arenaEl = $('arena');
-  const pipeRect = pipeEl.getBoundingClientRect();
-  const arenaRect = arenaEl.getBoundingClientRect();
-  const cx = pipeRect.left + pipeRect.width / 2 - arenaRect.left;
+  const pipeRect  = $('pipe').getBoundingClientRect();
+  const arenaRect = $('arena').getBoundingClientRect();
+  const cx        = pipeRect.left + pipeRect.width / 2 - arenaRect.left;
   burst.style.left = cx + 'px';
-  burst.style.top = crosshairY + 'px';
-  arenaEl.appendChild(burst);
+  burst.style.top  = crosshairY + 'px';
+  $('arena').appendChild(burst);
   setTimeout(() => burst.remove(), 400);
 }
 
@@ -525,14 +559,11 @@ function spawnLobbyClouds() {
 // ══════════════════════════════════════════════
 //  BUTTON HANDLERS
 // ══════════════════════════════════════════════
-$('btnStart').addEventListener('click', () => {
-  sendWS({ type: 'start_game' });
-});
+$('btnStart').addEventListener('click', () => sendWS({ type: 'start_game' }));
 
 $('btnRestart').addEventListener('click', () => {
   balloons = {};
-  phase = 'lobby';
-  // Keep players but reset their scores
+  phase    = 'lobby';
   Object.keys(players).forEach(n => players[n].score = 0);
   renderPlayerList();
   showScreen('lobby');
@@ -546,7 +577,24 @@ spawnLobbyClouds();
 showScreen('lobby');
 connect();
 
-// Resize handler to reposition crosshair
+// Resize: recalculate crosshair & scale, then rescale running balloons
 window.addEventListener('resize', () => {
-  if (phase === 'game') setupArena();
+  if (phase !== 'game') return;
+  setupArena();
+
+  // Re-scale speeds and visual size of all live balloons
+  requestAnimationFrame(() => {
+    const pipeInner  = $('pipeInner');
+    const pipeInnerH = pipeInner.clientHeight;
+    const bs = Math.max(0.55, Math.min(1.4, pipeScaleFactor));
+
+    Object.values(balloons).forEach(b => {
+      // Recompute speed relative to new pipe height
+      const baseSpeed = b.speed / (b._prevScale || pipeScaleFactor);
+      b.speed  = baseSpeed * pipeScaleFactor;
+      b.pipeH  = pipeInnerH;
+      b.bs     = Math.max(0.55, Math.min(1.4, pipeScaleFactor));
+      b.el.style.setProperty('--bs', b.bs);
+    });
+  });
 });

@@ -1,4 +1,4 @@
-  :root {
+:root {
     --sky: #87CEEB;
     --pipe: #5a3e2b;
     --pipe-light: #7a5e4b;
@@ -13,8 +13,12 @@
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
+  /* Projector-friendly base: 1rem = 18px so all rem/em values scale up automatically */
+  html { font-size: 18px; }
+
   body {
     font-family: 'Nunito', sans-serif;
+    font-size: 1rem;
     background: #1a0a00;
     min-height: 100vh;
     overflow: hidden;
@@ -56,7 +60,7 @@
     position: relative; z-index: 2;
   }
   .lobby-sub {
-    font-size: 1.1rem; color: #ffb347; letter-spacing: 3px;
+    font-size: 1.3rem; color: #ffb347; letter-spacing: 3px;
     text-transform: uppercase; margin-bottom: 2.5rem;
     position: relative; z-index: 2;
   }
@@ -81,7 +85,7 @@
 
   .lobby-panel h2 {
     font-family: 'Bangers', cursive;
-    font-size: 1.6rem; color: var(--gold);
+    font-size: 2rem; color: var(--gold);
     letter-spacing: 2px; margin-bottom: 1rem;
     text-align: center;
   }
@@ -98,20 +102,20 @@
     border-radius: 30px;
     padding: 4px 14px;
     font-weight: 700; color: #ffe;
-    font-size: 2rem;
+    font-size: 2.2rem;
     animation: popIn 0.3s cubic-bezier(.36,.07,.19,.97);
   }
   @keyframes popIn { from { transform: scale(0); } to { transform: scale(1); } }
 
   .lobby-status {
-    text-align: center; color: #aaa; font-size: 0.9rem; margin-bottom: 1rem;
+    text-align: center; color: #aaa; font-size: 1.1rem; margin-bottom: 1rem;
   }
 
   #btnStart {
     width: 100%;
     padding: 0.85rem;
     font-family: 'Bangers', cursive;
-    font-size: 1.8rem;
+    font-size: 2.2rem;
     letter-spacing: 3px;
     background: linear-gradient(135deg, #ff6a00, #ee0979);
     color: #fff;
@@ -128,7 +132,7 @@
   .ws-indicator {
     position: fixed; top: 12px; right: 16px;
     display: flex; align-items: center; gap: 6px;
-    font-size: 0.8rem; color: #aaa; z-index: 999;
+    font-size: 1rem; color: #aaa; z-index: 999;
   }
   .ws-dot {
     width: 10px; height: 10px; border-radius: 50%;
@@ -150,7 +154,7 @@
 
   /* Side panels */
   .side-panel {
-    width: 180px;
+    width: 210px;
     display: flex;
     flex-direction: column;
     gap: 8px;
@@ -175,20 +179,26 @@
   }
 
   .player-card.shot-flash {
-    border-color: #ff6600 !important;
-    background: rgba(255,100,0,0.2) !important;
+    animation: shooterPop 0.45s cubic-bezier(.36,.07,.19,.97) both;
+  }
+
+  @keyframes shooterPop {
+    0%   { transform: scale(1);    border-color: #5a3e00; box-shadow: none; background: rgba(255,215,0,0.07); }
+    25%  { transform: scale(1.18); border-color: #ff6600; box-shadow: 0 0 18px #ff6600, 0 0 40px rgba(255,102,0,0.5); background: rgba(255,100,0,0.35); }
+    60%  { transform: scale(0.96); border-color: #ffaa00; box-shadow: 0 0 10px #ffaa00; background: rgba(255,150,0,0.15); }
+    100% { transform: scale(1);    border-color: #5a3e00; box-shadow: none; background: rgba(255,215,0,0.07); }
   }
 
   .avatar {
-    width: 44px; height: 44px; border-radius: 50%;
+    width: 52px; height: 52px; border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
-    font-size: 2rem;
+    font-size: 2.2rem;
     border: 2px solid var(--gold);
     flex-shrink: 0;
   }
 
   .player-name {
-    font-weight: 900; font-size: 1.2rem;
+    font-weight: 900; font-size: 1.4rem;
     color: #ffe; letter-spacing: 1px;
     text-align: center;
     word-break: break-all;
@@ -196,7 +206,7 @@
 
   .player-score {
     font-family: 'Bangers', cursive;
-    font-size: 1.2rem;
+    font-size: 1.6rem;
     color: var(--gold);
     letter-spacing: 1px;
   }
@@ -235,6 +245,7 @@
     background: rgba(0,0,0,0.4);
     z-index: 10;
     border-bottom: 2px solid var(--border);
+    height: 48px;
   }
 
   .hud-item {
@@ -242,12 +253,12 @@
   }
 
   .hud-label {
-    font-size: 0.65rem; color: #aaa; letter-spacing: 2px; text-transform: uppercase;
+    font-size: 0.8rem; color: #aaa; letter-spacing: 2px; text-transform: uppercase;
   }
 
   .hud-value {
     font-family: 'Bangers', cursive;
-    font-size: 1.5rem; color: var(--gold); letter-spacing: 1px;
+    font-size: 2rem; color: var(--gold); letter-spacing: 1px;
   }
 
   /* Health bar */
@@ -304,7 +315,6 @@
     width: 90px; height: 90px;
     z-index: 8;
     pointer-events: none;
-    margin-top: -67px;
   }
 
   .crosshair svg {
@@ -318,7 +328,9 @@
     100% { transform: rotate(360deg); }
   }
 
-  /* Balloons */
+  /* ══════════════════════════════
+     BALLOONS  — proper balloon shapes
+  ══════════════════════════════ */
   .balloon {
     position: absolute;
     left: 50%;
@@ -328,68 +340,136 @@
     align-items: center;
     cursor: none;
     z-index: 5;
-    transition: top linear;
+    /* No transition on top — rAF handles movement */
   }
 
+  /* The round balloon body */
   .balloon-body {
-    border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
     position: relative;
-    display: flex; align-items: center; justify-content: center;
+    border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     font-weight: 900;
-    color: rgba(0,0,0,0.5);
-    font-size: 1rem;
-    box-shadow: inset -6px -6px 12px rgba(0,0,0,0.2), inset 4px 4px 8px rgba(255,255,255,0.5);
+    color: rgba(0,0,0,0.55);
+    font-size: 0.9rem;
+    /* Sheen: bright highlight top-left, shadow bottom-right */
+    box-shadow:
+      inset -5px -8px 14px rgba(0,0,0,0.25),
+      inset 5px 5px 10px rgba(255,255,255,0.55),
+      0 4px 10px rgba(0,0,0,0.35);
     transition: transform 0.1s;
+    /* Tiny knot at the bottom */
   }
 
+  /* Knot — pseudo element at bottom center of body */
+  .balloon-body::after {
+    content: '';
+    position: absolute;
+    bottom: -5px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 7px;
+    height: 7px;
+    background: inherit;
+    border-radius: 50% 50% 40% 40%;
+    filter: brightness(0.75);
+  }
+
+  /* String from knot downward */
   .balloon-string {
-    width: 1px; height: 14px;
-    background: rgba(0,0,0,0.3);
+    width: 1.5px;
+    height: 12px;
+    background: rgba(0,0,0,0.35);
+    margin-top: 5px; /* gap after knot */
   }
 
+  /* HP label — sits INSIDE the balloon body, centered */
   .balloon-hp {
     position: absolute;
-    top: -20px; left: 50%; transform: translateX(-50%);
-    background: rgba(0,0,0,0.7);
-    color: #fff; 
-    padding: 1px 5px; border-radius: 8px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0,0,0,0.45);
+    color: #fff;
+    padding: 1px 4px;
+    border-radius: 6px;
     white-space: nowrap;
-    font-size: 1.2rem;
+    font-size: 0.85em;
+    font-weight: 700;
+    pointer-events: none;
+    line-height: 1.3;
+    z-index: 2;
   }
 
-  /* Balloon types */
-  .balloon[data-type="red"] .balloon-body { width: 44px; height: 52px; background: radial-gradient(circle at 35% 30%, #ff6666, #cc0000); }
-  .balloon[data-type="blue"] .balloon-body { width: 50px; height: 58px; background: radial-gradient(circle at 35% 30%, #66aaff, #0044cc); }
-  .balloon[data-type="green"] .balloon-body { width: 56px; height: 64px; background: radial-gradient(circle at 35% 30%, #66ff88, #00aa33); }
-  .balloon[data-type="yellow"] .balloon-body { width: 52px; height: 60px; background: radial-gradient(circle at 35% 30%, #ffee44, #cc9900); }
-  .balloon[data-type="black"] .balloon-body { width: 62px; height: 70px; background: radial-gradient(circle at 35% 30%, #555, #111); color: #fff; }
-  .balloon[data-type="white"] .balloon-body { width: 62px; height: 70px; background: radial-gradient(circle at 35% 30%, #fff, #ccc); }
-  .balloon[data-type="purple"] .balloon-body { width: 68px; height: 76px; background: radial-gradient(circle at 35% 30%, #cc66ff, #6600aa); color: #fff; }
-  .balloon[data-type="moab"] .balloon-body { width: 80px; height: 56px; border-radius: 8px; background: linear-gradient(135deg, #334, #778, #334); color: #0ff; font-size: 0.7rem; }
+  /* ── Balloon type sizes & colours ── */
+  /* Scale factor is applied by JS via --bs (balloon scale) CSS var on .balloon,
+     so the base sizes here are the "reference" at 100vh = 800px pipe */
+  .balloon[data-type="red"]    .balloon-body { width: 44px; height: 52px; background: radial-gradient(circle at 38% 32%, #ff9999 10%, #cc0000 70%); }
+  .balloon[data-type="blue"]   .balloon-body { width: 50px; height: 58px; background: radial-gradient(circle at 38% 32%, #99ccff 10%, #0044cc 70%); }
+  .balloon[data-type="green"]  .balloon-body { width: 56px; height: 64px; background: radial-gradient(circle at 38% 32%, #99ffbb 10%, #00aa33 70%); }
+  .balloon[data-type="yellow"] .balloon-body { width: 52px; height: 60px; background: radial-gradient(circle at 38% 32%, #ffee88 10%, #cc9900 70%); }
+  .balloon[data-type="black"]  .balloon-body { width: 62px; height: 70px; background: radial-gradient(circle at 38% 32%, #777 10%, #111 70%); color: #ddd; }
+  .balloon[data-type="white"]  .balloon-body { width: 62px; height: 70px; background: radial-gradient(circle at 38% 32%, #fff 10%, #bbb 70%); }
+  .balloon[data-type="purple"] .balloon-body { width: 68px; height: 76px; background: radial-gradient(circle at 38% 32%, #dd99ff 10%, #6600aa 70%); color: #fff; }
+  /* MOAB is a blimp — wider than tall, rectangular with rounded corners */
+  .balloon[data-type="moab"]   .balloon-body {
+    width: 82px; height: 52px;
+    border-radius: 40% 40% 40% 40% / 50% 50% 50% 50%;
+    background: linear-gradient(135deg, #445 0%, #99aaaa 40%, #334 100%);
+    color: #0ff;
+    font-size: 0.6rem;
+    font-weight: 900;
+    letter-spacing: 1px;
+    box-shadow:
+      inset -5px -6px 12px rgba(0,0,0,0.4),
+      inset 4px 4px 8px rgba(255,255,255,0.2),
+      0 4px 12px rgba(0,0,0,0.5);
+  }
+  .balloon[data-type="moab"]   .balloon-body::after { display: none; }
+  .balloon[data-type="moab"]   .balloon-string { display: none; }
 
-  /* Pop animation */
+  /* Scale balloons uniformly by JS-injected CSS variable */
+  .balloon-body {
+    transform-origin: center bottom;
+    transform: scale(var(--bs, 1));
+  }
+  .balloon-string {
+    transform: scaleY(var(--bs, 1));
+    transform-origin: top center;
+  }
+
+  /* Pop animation — animates the whole .balloon element (transform on parent) */
   @keyframes pop {
-    0% { transform: translateX(-50%) scale(1); opacity: 1; }
-    40% { transform: translateX(-50%) scale(1.8); opacity: 0.8; }
-    100% { transform: translateX(-50%) scale(0); opacity: 0; }
+    0%   { transform: translateX(-50%) scale(1);   opacity: 1; }
+    30%  { transform: translateX(-50%) scale(1.9); opacity: 1; }
+    100% { transform: translateX(-50%) scale(0);   opacity: 0; }
+  }
+  .balloon.popping {
+    animation: pop 0.45s cubic-bezier(.36,.07,.19,.97) forwards;
+    /* override the --bs scale on balloon-body so the whole balloon pops together */
+  }
+  /* Freeze --bs body scale so parent pop anim takes full control;
+     also cancel any lingering hitFlash on the body */
+  .balloon.popping .balloon-body {
+    animation: none !important;
+    transform: scale(1) !important;
   }
 
-  .balloon.popping { animation: pop 0.35s ease-out forwards; }
-
-  /* Hit flash */
+  /* Hit flash — targets .balloon-body so it never conflicts with the
+     pop animation running on the parent .balloon element */
   @keyframes hitFlash {
     0%, 100% { filter: brightness(1); }
-    50% { filter: brightness(2.5) saturate(0); }
+    50%       { filter: brightness(2.5) saturate(0); }
   }
-  .balloon.hit { animation: hitFlash 0.15s; }
+  .balloon.hit .balloon-body { animation: hitFlash 0.15s; }
 
   /* Escape animation */
   @keyframes escapeFlash {
-    0% { background: transparent; }
-    50% { background: rgba(255,0,0,0.3); }
+    0%   { background: transparent; }
+    50%  { background: rgba(255,0,0,0.3); }
     100% { background: transparent; }
   }
-
   .arena.escaped { animation: escapeFlash 0.5s; }
 
   /* Shoot burst */
@@ -403,17 +483,16 @@
     z-index: 20;
     transform: translate(-50%, -50%);
   }
-
   @keyframes burst {
     from { transform: translate(-50%, -50%) scale(0); opacity: 1; }
-    to { transform: translate(-50%, -50%) scale(3); opacity: 0; }
+    to   { transform: translate(-50%, -50%) scale(3); opacity: 0; }
   }
 
   /* Score popup */
   .score-popup {
     position: absolute;
     font-family: 'Bangers', cursive;
-    font-size: 1.4rem;
+    font-size: 1.8rem;
     color: var(--gold);
     text-shadow: 1px 1px 0 #000;
     pointer-events: none;
@@ -421,12 +500,11 @@
     animation: floatUp 1s ease-out forwards;
     left: 50%; transform: translateX(-50%);
   }
-
-  .score-popup.double { color: #ff4500; font-size: 1.8rem; }
+  .score-popup.double { color: #ff4500; font-size: 2.2rem; }
 
   @keyframes floatUp {
-    from { transform: translateX(-50%) translateY(0); opacity: 1; }
-    to { transform: translateX(-50%) translateY(-80px); opacity: 0; }
+    from { transform: translateX(-50%) translateY(0);     opacity: 1; }
+    to   { transform: translateX(-50%) translateY(-80px); opacity: 0; }
   }
 
   /* ══════════════════════════════
@@ -441,7 +519,7 @@
 
   #scoring h1 {
     font-family: 'Bangers', cursive;
-    font-size: clamp(2.5rem, 6vw, 5rem);
+    font-size: clamp(3rem, 7vw, 6rem);
     color: var(--gold);
     text-shadow: 0 0 30px #ff8800, 3px 3px 0 #5a3000;
     margin-bottom: 0.5rem;
@@ -449,7 +527,7 @@
   }
 
   #scoring .reason {
-    color: #ff6666; font-size: 1rem; margin-bottom: 2rem; letter-spacing: 2px;
+    color: #ff6666; font-size: 1.3rem; margin-bottom: 2rem; letter-spacing: 2px;
   }
 
   #scoreTable {
@@ -472,30 +550,30 @@
 
   @keyframes slideIn {
     from { transform: translateX(-40px); opacity: 0; }
-    to { transform: translateX(0); opacity: 1; }
+    to   { transform: translateX(0);     opacity: 1; }
   }
 
   .rank-badge {
     font-family: 'Bangers', cursive;
-    font-size: 1.4rem;
-    width: 36px; text-align: center;
+    font-size: 1.7rem;
+    width: 40px; text-align: center;
     color: #888;
   }
-  .rank-badge.r1 { color: var(--gold); font-size: 1.8rem; }
+  .rank-badge.r1 { color: var(--gold); font-size: 2.2rem; }
   .rank-badge.r2 { color: #aaa; }
   .rank-badge.r3 { color: #cd7f32; }
 
-  .score-row .name { flex: 1; font-weight: 700; color: #ffe; }
+  .score-row .name { flex: 1; font-weight: 700; font-size: 1.2rem; color: #ffe; }
   .score-row .pts {
     font-family: 'Bangers', cursive;
-    font-size: 1.5rem; color: var(--gold);
+    font-size: 1.9rem; color: var(--gold);
   }
 
   #btnRestart {
     margin-top: 2rem;
     padding: 0.75rem 2.5rem;
     font-family: 'Bangers', cursive;
-    font-size: 1.5rem;
+    font-size: 2rem;
     letter-spacing: 2px;
     background: linear-gradient(135deg, #ff6a00, #ee0979);
     color: #fff; border: none; border-radius: 10px;
@@ -503,26 +581,24 @@
     box-shadow: 0 5px 0 #8b0000;
     transition: transform 0.1s;
   }
-  #btnRestart:hover { transform: translateY(-2px); }
+  #btnRestart:hover  { transform: translateY(-2px); }
   #btnRestart:active { transform: translateY(2px); box-shadow: 0 3px 0 #8b0000; }
 
   /* Timer */
   #timerDisplay {
     font-family: 'Bangers', cursive;
-    font-size: 2rem;
+    font-size: 2.6rem;
     color: var(--gold);
     letter-spacing: 3px;
     text-shadow: 0 0 10px rgba(255,215,0,0.5);
   }
-
   #timerDisplay.urgent {
     color: #ff2233;
     animation: timerPulse 0.5s infinite;
   }
-
   @keyframes timerPulse {
     0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.1); }
+    50%       { transform: scale(1.1); }
   }
 
   /* Balloon-in-zone indicator */
@@ -537,29 +613,27 @@
     opacity: 0;
     background: radial-gradient(circle, rgba(255,100,0,0.4), transparent 70%);
   }
-
   #zoneLight.active { opacity: 1; animation: zonePulse 0.6s infinite; }
 
   @keyframes zonePulse {
-    0%, 100% { transform: translateX(-50%) scale(1); }
-    50% { transform: translateX(-50%) scale(1.15); }
+    0%, 100% { transform: translateX(-50%) scale(1);    }
+    50%       { transform: translateX(-50%) scale(1.15); }
   }
 
   /* Miss indicator */
   .miss-text {
     position: absolute;
     font-family: 'Bangers', cursive;
-    font-size: 1.2rem;
+    font-size: 1.6rem;
     color: #ff4444;
     pointer-events: none;
     z-index: 30;
     animation: missFloat 0.8s ease-out forwards;
     left: 50%; transform: translateX(-50%);
   }
-
   @keyframes missFloat {
-    from { opacity: 1; transform: translateX(-50%) translateY(0); }
-    to { opacity: 0; transform: translateX(-50%) translateY(-40px); }
+    from { opacity: 1; transform: translateX(-50%) translateY(0);     }
+    to   { opacity: 0; transform: translateX(-50%) translateY(-40px); }
   }
 
   /* Pipe entrance/exit fx */
@@ -586,7 +660,7 @@
     flex-direction: column; gap: 1rem;
   }
   #connOverlay.hidden { display: none; }
-  #connOverlay p { color: #ffb347; font-size: 1.1rem; letter-spacing: 2px; }
+  #connOverlay p { color: #ffb347; font-size: 1.4rem; letter-spacing: 2px; }
   .spin {
     width: 40px; height: 40px;
     border: 4px solid rgba(255,180,0,0.2);

@@ -27,10 +27,32 @@ from fastapi.responses import FileResponse
 # ──────────────────────────────────────────────
 #  CONFIG
 # ──────────────────────────────────────────────
-GAME_DURATION = 120          # seconds
-MAX_LIVES     = 5
-MAX_PLAYERS   = 10
-CROSSHAIR_PCT = 0.62         # fraction down the pipe where crosshair sits
+GAME_DURATION      = 120     # seconds
+MAX_LIVES          = 5
+MAX_PLAYERS        = 10
+
+# ── Coordinate model ──────────────────────────────────────────────────────────
+# The server tracks balloon position in logical px relative to the TOP OF THE
+# PIPE INNER (same origin the client uses for b.top in the rAF loop).
+#
+# Balloons start at -100 px (above the pipe entrance) and travel downward.
+# REFERENCE_PIPE_H is the logical pipe height the speed values are tuned to.
+#
+# The crosshair sits at CROSSHAIR_PCT of the *pipe* measured from the pipe top,
+# so in logical px:
+#   crosshair_px = REFERENCE_PIPE_H * CROSSHAIR_PCT
+#
+# ZONE_HALF_PX is the +-tolerance in logical px (= ZONE_HALF_WIDTH * pipe height).
+# Balloon centre = b.top + AVG_HALF_BODY_H (~30 px average across types).
+# ─────────────────────────────────────────────────────────────────────────────
+REFERENCE_PIPE_H   = 800.0          # logical px – speeds are tuned to this
+CROSSHAIR_PCT      = 0.62           # fraction of pipe height (from pipe top)
+CROSSHAIR_PX       = REFERENCE_PIPE_H * CROSSHAIR_PCT   # 496 px from pipe top
+ZONE_HALF_WIDTH    = 0.064          # fraction of pipe height
+ZONE_HALF_PX       = REFERENCE_PIPE_H * ZONE_HALF_WIDTH # ~51 px
+
+BALLOON_SPAWN_TOP  = -100.0         # logical px – where balloons start (above pipe)
+AVG_HALF_BODY_H    = 30.0           # logical px – approx half-height of balloon body
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 log = logging.getLogger("bloons")
@@ -87,24 +109,34 @@ class ActiveBalloon:
     template: BalloonTemplate
     hp: int
     spawn_time: float
-    pipe_height: float = 1080.0   # must match client-side estimate
+    # Position tracked in logical px from TOP OF PIPE INNER, matching client b.top.
+    # Balloons start at BALLOON_SPAWN_TOP (-100 px) and move downward at
+    # template.speed px/s (tuned to REFERENCE_PIPE_H = 800 px).
 
     @property
     def elapsed(self) -> float:
         return time.monotonic() - self.spawn_time
 
     @property
-    def position_pct(self) -> float:
-        """0.0 = top of pipe entrance, 1.0 = bottom exit"""
-        return (self.elapsed * self.template.speed) / self.pipe_height
+    def top_px(self) -> float:
+        """Logical px from pipe-inner top (same as client b.top)."""
+        return BALLOON_SPAWN_TOP + self.elapsed * self.template.speed
+
+    @property
+    def center_px(self) -> float:
+        """Balloon centre in logical px from pipe-inner top."""
+        return self.top_px + AVG_HALF_BODY_H
 
     @property
     def in_zone(self) -> bool:
-        return abs(self.position_pct - CROSSHAIR_PCT) < 0.03  # ±10% of pipe
+        """True when balloon centre is within the hit window:
+        approaching from above (within ZONE_HALF_PX) up to just past the crosshair."""
+        delta = self.center_px - CROSSHAIR_PX
+        return (-ZONE_HALF_PX <= delta <= ZONE_HALF_PX * 0.3)
 
     @property
     def escaped(self) -> bool:
-        return self.position_pct > 1.05
+        return self.top_px > REFERENCE_PIPE_H
 
 
 class GameState:
@@ -203,10 +235,11 @@ async def handle_shoot(shooter: str):
 
     in_zone = [b for b in state.balloons.values() if b.in_zone]
     if not in_zone:
+        state.players[shooter].score -= 1
         await browser_mgr.broadcast({"type": "shoot_miss", "shooter": shooter})
         return
 
-    target      = min(in_zone, key=lambda b: abs(b.position_pct - CROSSHAIR_PCT))
+    target      = min(in_zone, key=lambda b: abs(b.center_px - CROSSHAIR_PX))
     pts_per_hit = target.template.points
     target.hp  -= 1
     state.players[shooter].score += pts_per_hit
