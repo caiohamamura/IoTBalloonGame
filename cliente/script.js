@@ -1,7 +1,7 @@
 // ══════════════════════════════════════════════
 //  CONFIG
 // ══════════════════════════════════════════════
-const WS_URL = `ws://${location.hostname}:8000/ws`;
+const WS_URL = `ws://10.134.76.100:8000/ws`;
 const CROSSHAIR_OFFSET_PERCENT = 0.62; // 62% down the pipe
 const GAME_DURATION = 120;             // seconds
 const MAX_LIVES = 5;
