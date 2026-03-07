@@ -1,5 +1,5 @@
 """
-Bloons Siege - FastAPI Backend  (WebSocket-only edition)
+IoT Balloons - FastAPI Backend  (WebSocket-only edition)
 =========================================================
 Two WebSocket endpoints:
   /ws          → browser (game display + master controls)
@@ -373,7 +373,7 @@ async def end_game(reason: str):
 # ──────────────────────────────────────────────
 #  FASTAPI APP
 # ──────────────────────────────────────────────
-app = FastAPI(title="Bloons Siege")
+app = FastAPI(title="IoT Balloons")
 
 
 @app.get("/")
