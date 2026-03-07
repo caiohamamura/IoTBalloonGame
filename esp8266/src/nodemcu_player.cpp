@@ -1,25 +1,3 @@
-/*
-  Bloons Siege – NodeMCU Player Device  (WebSocket-only edition)
-  ===============================================================
-  Connects directly to the FastAPI server via WebSocket.
-  No MQTT broker required.
-
-  Hardware:
-    D1 (GPIO5)  → Button (active-LOW, internal pull-up enabled)
-    D2 (GPIO4)  → LED cathode (sink-wired: Anode → 3.3V via 220Ω, Cathode → D2)
-                  GPIO LOW  = LED ON
-                  GPIO HIGH = LED OFF
-
-  Libraries – install via Arduino Library Manager:
-    • ESP8266WiFi        (bundled with ESP8266 board package)
-    • WebSocketsClient   by Markus Sattler  ≥2.3  (search "WebSockets")
-    • ArduinoJson        by Benoit Blanchon ≥6.x
-
-  Board Manager URL:
-    https://arduino.esp8266.com/stable/package_esp8266com_index.json
-  Select board: "NodeMCU 1.0 (ESP-12E Module)"
-*/
-
 #include <ESP8266WiFi.h>
 #include <WebsocketsClient.h>
 #include <ArduinoJson.h>
@@ -37,13 +15,13 @@ const char* PLAYER_NAME  = "Caio";        // max 8 chars
 // ──────────────────────────────────────────────
 //  PINS
 // ──────────────────────────────────────────────
-#define PIN_LED     D2   // GPIO4  (sink: LOW = ON)
+const int PIN_LED = D1; // LED em Dreno
+const int PIN_BUTTON = D2;
 
 // ──────────────────────────────────────────────
 //  GLOBALS
 // ──────────────────────────────────────────────
 WebSocketsClient ws;
-
 
 bool     ledState      = false;
 bool     wsConnected   = false;
@@ -79,7 +57,7 @@ void blinkLed(int times, int ms) {
 //  SEND JSON HELPERS
 // ──────────────────────────────────────────────
 void sendJoin() {
-  StaticJsonDocument<64> doc;
+  JsonDocument doc;
   doc["type"] = "join";
   doc["name"] = PLAYER_NAME;
   String out;
@@ -92,7 +70,7 @@ void sendJoin() {
 }
 
 void sendShoot() {
-  StaticJsonDocument<64> doc;
+  JsonDocument doc;
   doc["type"] = "shoot";
   doc["name"] = PLAYER_NAME;
   String out;
@@ -124,7 +102,7 @@ void onWsEvent(WStype_t type, uint8_t* payload, size_t length) {
 
     case WStype_TEXT: {
       // Parse incoming JSON from server
-      StaticJsonDocument<128> doc;
+      JsonDocument doc;
       DeserializationError err = deserializeJson(doc, payload, length);
       if (err) {
         Serial.print("[WS] JSON parse error: ");
@@ -141,11 +119,6 @@ void onWsEvent(WStype_t type, uint8_t* payload, size_t length) {
       }
       break;
     }
-
-    case WStype_PING:
-    case WStype_PONG:
-      // handled automatically by the library
-      break;
 
     default:
       break;
@@ -184,7 +157,7 @@ void setup() {
 
   pinMode(PIN_LED, OUTPUT);
   digitalWrite(PIN_LED, HIGH);   // LED off
-  pinMode(D1, INPUT_PULLUP);
+  pinMode(PIN_BUTTON, INPUT_PULLUP);
 
   connectWiFi();
 
@@ -199,14 +172,8 @@ void setup() {
 }
 
 bool touching = false;
-/*************  ✨ Windsurf Command ⭐  *************/
-/**
- * @brief Handle button press/release events
- * @details Updates the `touching` variable and prints debug messages
- */
-/*******  e3384ecd-2cf4-4eff-b2fe-86bd59adb300  *******/
 void handleButton() {
-  bool isPressed = digitalRead(D1) == LOW;
+  bool isPressed = digitalRead(PIN_BUTTON) == LOW;
   if (isPressed && !touching) {
     sendShoot();
     touching = true;

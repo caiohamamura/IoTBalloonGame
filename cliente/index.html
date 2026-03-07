@@ -27,9 +27,9 @@
   <h1 class="lobby-title">BLOONS SIEGE</h1>
   <p class="lobby-sub">Multiplayer • IoT Edition</p>
   <div class="lobby-panel">
-    <h2>⚡ PLAYERS ONLINE</h2>
+    <h2>⚡ JOGADORES ONLINE</h2>
     <ul id="playerList"></ul>
-    <p class="lobby-status" id="lobbyStatus">Waiting for players to connect…</p>
+    <p class="lobby-status" id="lobbyStatus">Esperando mais jogadores...</p>
     <button id="btnStart" disabled>START GAME</button>
   </div>
 </div>
@@ -42,14 +42,14 @@
     <!-- HUD -->
     <div class="hud">
       <div class="hud-item">
-        <span class="hud-label">Wave</span>
+        <span class="hud-label">Fase</span>
         <span class="hud-value" id="waveDisplay">1</span>
       </div>
       <div class="health-bar-wrap" title="Team HP">
         <div id="healthBar"></div>
       </div>
       <div class="hud-item">
-        <span class="hud-label">Time</span>
+        <span class="hud-label">Tempo</span>
         <span id="timerDisplay">2:00</span>
       </div>
     </div>
@@ -86,10 +86,10 @@
 
 <!-- ══ SCORING ══ -->
 <div class="screen" id="scoring">
-  <h1>GAME OVER</h1>
+  <h1>FIM DE JOGO</h1>
   <p class="reason" id="endReason"></p>
   <div id="scoreTable"></div>
-  <button id="btnRestart">PLAY AGAIN</button>
+  <button id="btnRestart">Jogar Novamente</button>
 </div>
 <script src="script.js"></script>
 </body>

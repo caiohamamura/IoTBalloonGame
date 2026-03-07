@@ -58,7 +58,7 @@ function connect() {
 
   ws.onopen = () => {
     $('wsDot').className = 'ws-dot connected';
-    $('wsLabel').textContent = 'Connected';
+    $('wsLabel').textContent = 'Conectado';
     $('connOverlay').classList.add('hidden');
   };
 
@@ -135,8 +135,8 @@ function renderPlayerList() {
     ul.appendChild(li);
   });
   $('lobbyStatus').textContent = names.length === 0
-    ? 'Waiting for players to connect…'
-    : `${names.length} player${names.length > 1 ? 's' : ''} ready`;
+    ? 'Esperando jogadores se conectar...'
+    : `${names.length} jogador${names.length > 1 ? 's' : ''} pronto`;
   $('btnStart').disabled = names.length < 1;
 }
 
@@ -334,7 +334,7 @@ function animateBalloon(id) {
     // and no more than a tiny margin BELOW it — so the zone is centred on approach
     // and ends right as the balloon centre passes the crosshair line.
     b.inZone = (balloonCenterY >= crosshairY - zoneTolerance) &&
-               (balloonCenterY <= crosshairY + zoneTolerance * 0.3);
+               (balloonCenterY <= crosshairY + zoneTolerance * 1);
 
     // Don't interfere with the pop animation
     if (b.popping) return;

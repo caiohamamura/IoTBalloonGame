@@ -49,7 +49,7 @@ REFERENCE_PIPE_H   = 800.0          # logical px – speeds are tuned to this
 CROSSHAIR_PCT      = 0.62           # fraction of pipe height (from pipe top)
 CROSSHAIR_PX       = REFERENCE_PIPE_H * CROSSHAIR_PCT   # 496 px from pipe top
 ZONE_HALF_WIDTH    = 0.064          # fraction of pipe height
-ZONE_HALF_PX       = REFERENCE_PIPE_H * ZONE_HALF_WIDTH # ~51 px
+ZONE_HALF_PX       = REFERENCE_PIPE_H * ZONE_HALF_WIDTH
 
 BALLOON_SPAWN_TOP  = -100.0         # logical px – where balloons start (above pipe)
 AVG_HALF_BODY_H    = 30.0           # logical px – approx half-height of balloon body
@@ -132,7 +132,7 @@ class ActiveBalloon:
         """True when balloon centre is within the hit window:
         approaching from above (within ZONE_HALF_PX) up to just past the crosshair."""
         delta = self.center_px - CROSSHAIR_PX
-        return (-ZONE_HALF_PX <= delta <= ZONE_HALF_PX * 0.3)
+        return (-ZONE_HALF_PX <= delta <= ZONE_HALF_PX * 1)
 
     @property
     def escaped(self) -> bool:
@@ -223,11 +223,12 @@ async def handle_join(name: str):
     if name in state.players or len(state.players) >= MAX_PLAYERS:
         return
     state.players[name] = Player(name=name)
-    log.info(f"Player joined: {name}")
+    log.info(f"{name} jogador se juntou ao servidor")
     await browser_mgr.broadcast({"type": "player_joined", "name": name})
 
 
 async def handle_shoot(shooter: str):
+    log.info(f"{shooter} atirou!")
     if state.phase != Phase.GAME:
         return
     if shooter not in state.players:
@@ -278,7 +279,7 @@ _game_task: Optional[asyncio.Task] = None
 
 
 async def game_loop():
-    log.info("Game loop started")
+    log.info("Loop do jogo iniciado")
     state.start_time = time.monotonic()
     wave_idx         = 0
     prev_in_zone     = False
@@ -356,13 +357,13 @@ async def game_loop():
                 "wave":      state.wave,
             })
 
-    log.info("Game loop ended")
+    log.info("Loop do jogo finalizado")
 
 
 async def end_game(reason: str):
     state.phase = Phase.SCORING
     await notify_devices_led(False)
-    log.info(f"Game over: {reason}")
+    log.info(f"Fim do jogo: {reason}")
     await browser_mgr.broadcast({
         "type":   "game_over",
         "reason": reason,
@@ -387,7 +388,7 @@ async def root():
 async def ws_browser(websocket: WebSocket):
     global _game_task
     await browser_mgr.connect(websocket)
-    log.info("Browser connected")
+    log.info("Navegador conectado")
 
     # Catch the browser up with current state
     await browser_mgr.send(websocket, {
@@ -419,18 +420,17 @@ async def ws_browser(websocket: WebSocket):
                 saved = {n: Player(name=n) for n in state.players}
                 state.reset()
                 state.players = saved
-                log.info("Game reset (players preserved)")
+                log.info("Jogo reiniciado")
 
     except WebSocketDisconnect:
         browser_mgr.disconnect(websocket)
-        log.info("Browser disconnected")
+        log.info("Navegador desconectado")
 
 
 # ── Device WebSocket ───────────────────────────
 @app.websocket("/ws/device")
 async def ws_device(websocket: WebSocket):
     await device_mgr.connect(websocket)
-    log.info("Device connected")
 
     try:
         while True:
@@ -441,6 +441,7 @@ async def ws_device(websocket: WebSocket):
             if mtype == "join":
                 name = str(msg.get("name", ""))[:8]
                 if name:
+                    log.info(f"Dispositivo {name} conectado")
                     device_names[websocket] = name
                     await handle_join(name)
 
@@ -453,7 +454,7 @@ async def ws_device(websocket: WebSocket):
     except WebSocketDisconnect:
         device_mgr.disconnect(websocket)
         device_names.pop(websocket, None)
-        log.info("Device disconnected")
+        log.info("Dispositivo desconectado")
 
 
 # ── Test helpers ───────────────────────────────
