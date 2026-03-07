@@ -243,7 +243,6 @@ async def handle_shoot(shooter: str):
     target      = min(in_zone, key=lambda b: abs(b.center_px - CROSSHAIR_PX))
     pts_per_hit = target.template.points
     target.hp  -= 1
-    state.players[shooter].score += pts_per_hit
 
     if target.hp <= 0:
         bonus = pts_per_hit * 2
@@ -256,6 +255,7 @@ async def handle_shoot(shooter: str):
             "bonus_points": bonus,
         })
     else:
+        state.players[shooter].score += pts_per_hit
         await browser_mgr.broadcast({
             "type":    "balloon_hit",
             "id":      target.id,
