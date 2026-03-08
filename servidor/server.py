@@ -152,6 +152,15 @@ class GameState:
         self.start_time: float                  = 0.0
         self._balloon_counter: int              = 0
 
+    def get_state(self) -> Dict[str, object]:
+        return {
+            "phase": self.phase.name,
+            "lives": self.lives,
+            "wave": self.wave,
+            "scores": self.scores,
+            "time_left": self.time_left,
+        }
+
     def new_balloon_id(self) -> str:
         self._balloon_counter += 1
         return f"b{self._balloon_counter}"
@@ -391,15 +400,30 @@ async def ws_browser(websocket: WebSocket):
     log.info("Navegador conectado")
 
     # Catch the browser up with current state
+    the_state = state.get_state()
+    log.info(the_state)
+
     await browser_mgr.send(websocket, {
-        "type":   "state_sync",
-        "phase":  state.phase.value,
-        "lives":  state.lives,
-        "scores": {n: p.score for n, p in state.players.items()},
+        "type": "state_sync",
+        **the_state, 
     })
+
     for name in state.players:
         await browser_mgr.send(websocket, {"type": "player_joined", "name": name})
 
+    for balloon in state.balloons:
+        the_balloon = state.balloons[balloon]
+        the_template = the_balloon.template
+        await browser_mgr.send(websocket, {
+                    "type":  "balloon_spawn",
+                    "id":    the_balloon.id,
+                    "btype": the_template.type,
+                    "hp":    the_template.hp,
+                    "speed": the_template.speed,
+                    "top_px": the_balloon.top_px - AVG_HALF_BODY_H,
+        })
+
+    
     try:
         while True:
             raw   = await websocket.receive_text()

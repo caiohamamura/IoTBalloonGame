@@ -296,13 +296,14 @@ function onBalloonSpawn(msg) {
   el.style.zIndex = 10 + spawnOrder;
 
   pipeInner.appendChild(el);
+  let the_top = msg.top_px ?? -100;
 
   balloons[msg.id] = {
     el,
     type:   msg.btype,
     hp:     msg.hp,
     maxHp:  msg.hp,
-    top:    -100,
+    top:    the_top,
     speed:  scaledSpeed,
     pipeH:  pipeInnerH,
     bodyH,
@@ -438,6 +439,12 @@ function onShootMiss(msg) {
 }
 
 function onStateSync(msg) {
+  let the_phase = msg.phase?.toLowerCase() || 'lobby';
+  if (phase === 'lobby' && the_phase === 'game') {
+    onGameStart(msg);
+  } else if (phase === 'lobby' && the_phase === 'scoring') {
+    onGameOver(msg);
+  }
   if (msg.scores) {
     Object.entries(msg.scores).forEach(([name, score]) => {
       if (players[name]) {
